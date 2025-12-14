@@ -8,14 +8,12 @@ let package = Package(
         .macOS(.v14)
     ],
     dependencies: [
-        .package(url: "https://github.com/swiftlang/swift-markdown.git", from: "0.4.0"),
         .package(url: "https://github.com/jpsim/Yams.git", from: "5.1.0")
     ],
     targets: [
         .target(
             name: "MarkdownEditorCore",
             dependencies: [
-                .product(name: "Markdown", package: "swift-markdown"),
                 .product(name: "Yams", package: "Yams")
             ],
             path: "Sources/MarkdownEditorCore"

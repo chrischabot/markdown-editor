@@ -79,7 +79,7 @@ final class EdgeCaseTests: XCTestCase {
 
     func testMismatchedDelimiters() {
         let text = "**bold* or *italic**"
-        let boldMatches = SyntaxPatterns.boldAsterisk.matches(in: text, range: NSRange(location: 0, length: text.utf16.count))
+        _ = SyntaxPatterns.boldAsterisk.matches(in: text, range: NSRange(location: 0, length: text.utf16.count))
         // Pattern should not match mismatched delimiters
         XCTAssertTrue(true) // Just ensuring no crash
     }

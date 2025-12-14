@@ -16,16 +16,16 @@ struct ToolbarView: View {
 
                 ToolbarGroup {
                     ToolbarButton(icon: "bold", tooltip: "Bold (⌘B)") {
-                        NotificationCenter.default.post(name: .formatBold, object: nil)
+                        EditorCommandRouter.post(.formatBold)
                     }
                     ToolbarButton(icon: "italic", tooltip: "Italic (⌘I)") {
-                        NotificationCenter.default.post(name: .formatItalic, object: nil)
+                        EditorCommandRouter.post(.formatItalic)
                     }
                     ToolbarButton(icon: "strikethrough", tooltip: "Strikethrough (⇧⌘X)") {
-                        NotificationCenter.default.post(name: .formatStrikethrough, object: nil)
+                        EditorCommandRouter.post(.formatStrikethrough)
                     }
                     ToolbarButton(icon: "chevron.left.forwardslash.chevron.right", tooltip: "Inline Code (⌘E)") {
-                        NotificationCenter.default.post(name: .formatCode, object: nil)
+                        EditorCommandRouter.post(.formatCode)
                     }
                 }
 
@@ -33,13 +33,13 @@ struct ToolbarView: View {
 
                 ToolbarGroup {
                     ToolbarButton(icon: "list.bullet", tooltip: "Bulleted List (⇧⌘U)") {
-                        NotificationCenter.default.post(name: .formatUnorderedList, object: nil)
+                        EditorCommandRouter.post(.formatUnorderedList)
                     }
                     ToolbarButton(icon: "list.number", tooltip: "Numbered List (⇧⌘O)") {
-                        NotificationCenter.default.post(name: .formatOrderedList, object: nil)
+                        EditorCommandRouter.post(.formatOrderedList)
                     }
                     ToolbarButton(icon: "checklist", tooltip: "Task List (⇧⌘T)") {
-                        NotificationCenter.default.post(name: .formatTaskList, object: nil)
+                        EditorCommandRouter.post(.formatTaskList)
                     }
                 }
 
@@ -47,13 +47,13 @@ struct ToolbarView: View {
 
                 ToolbarGroup {
                     ToolbarButton(icon: "text.quote", tooltip: "Blockquote (⇧⌘.)") {
-                        NotificationCenter.default.post(name: .formatBlockquote, object: nil)
+                        EditorCommandRouter.post(.formatBlockquote)
                     }
                     ToolbarButton(icon: "curlybraces", tooltip: "Code Block (⇧⌘C)") {
-                        NotificationCenter.default.post(name: .formatCodeBlock, object: nil)
+                        EditorCommandRouter.post(.formatCodeBlock)
                     }
                     ToolbarButton(icon: "minus", tooltip: "Horizontal Rule (⇧⌘-)") {
-                        NotificationCenter.default.post(name: .formatHorizontalRule, object: nil)
+                        EditorCommandRouter.post(.formatHorizontalRule)
                     }
                 }
 
@@ -67,7 +67,7 @@ struct ToolbarView: View {
                         showingImageSheet = true
                     }
                     ToolbarButton(icon: "tablecells", tooltip: "Insert Table (⌥⌘T)") {
-                        NotificationCenter.default.post(name: .insertTable, object: nil)
+                        EditorCommandRouter.post(.insertTable)
                     }
                 }
 
@@ -97,12 +97,18 @@ private struct HeadingMenu: View {
         Menu {
             ForEach(1...6, id: \.self) { level in
                 Button("Heading \(level)") {
-                    NotificationCenter.default.post(name: .formatHeading, object: level)
+                    EditorCommandRouter.post(
+                        .formatHeading,
+                        userInfo: [MarkdownEditorNotificationUserInfoKey.headingLevel: level]
+                    )
                 }
             }
             Divider()
             Button("Paragraph") {
-                NotificationCenter.default.post(name: .formatHeading, object: 0)
+                EditorCommandRouter.post(
+                    .formatHeading,
+                    userInfo: [MarkdownEditorNotificationUserInfoKey.headingLevel: 0]
+                )
             }
         } label: {
             HStack(spacing: 4) {
@@ -191,7 +197,10 @@ private struct LinkInsertSheet: View {
 
                 Button("Insert") {
                     let link = LinkInsert(text: linkText, url: linkURL)
-                    NotificationCenter.default.post(name: .insertLink, object: link)
+                    EditorCommandRouter.post(
+                        .insertLink,
+                        userInfo: [MarkdownEditorNotificationUserInfoKey.linkInsert: link]
+                    )
                     isPresented = false
                 }
                 .keyboardShortcut(.defaultAction)
@@ -229,7 +238,10 @@ private struct ImageInsertSheet: View {
 
                 Button("Insert") {
                     let image = ImageInsert(altText: altText, url: imageURL)
-                    NotificationCenter.default.post(name: .insertImage, object: image)
+                    EditorCommandRouter.post(
+                        .insertImage,
+                        userInfo: [MarkdownEditorNotificationUserInfoKey.imageInsert: image]
+                    )
                     isPresented = false
                 }
                 .keyboardShortcut(.defaultAction)

@@ -7,7 +7,12 @@ final class SyntaxHighlighter {
 
     // Debouncing
     private var debounceWorkItem: DispatchWorkItem?
-    private let debounceDelay: TimeInterval = 0.016 // ~60fps, 16ms
+    private var debounceDelay: TimeInterval = 0.016 // ~60fps, 16ms
+
+    // Range expansion buffers
+    private var dirtyRangeBuffer: Int = 500
+    private var visibleRangeBuffer: Int = 1000
+    private var attributeConfiguration = AttributeComputer.Configuration()
 
     // Incremental highlighting
     private var dirtyRange: NSRange?
@@ -76,6 +81,15 @@ final class SyntaxHighlighter {
         DispatchQueue.main.asyncAfter(deadline: .now() + debounceDelay, execute: workItem)
     }
 
+    func setLargeDocumentMode(_ enabled: Bool) {
+        debounceDelay = enabled ? 0.05 : 0.016
+        dirtyRangeBuffer = enabled ? 200 : 500
+        visibleRangeBuffer = enabled ? 600 : 1000
+        attributeConfiguration = AttributeComputer.Configuration(
+            codeBlockScanBackLimit: enabled ? 50_000 : Int.max
+        )
+    }
+
     func highlightAll() {
         guard let textView = textView,
               let textStorage = textView.textStorage else { return }
@@ -86,7 +100,7 @@ final class SyntaxHighlighter {
         guard fullRange.length > 0 else { return }
 
         // Compute and apply synchronously for initial load
-        let attributes = AttributeComputer.computeAttributes(for: text, in: fullRange)
+        let attributes = AttributeComputer.computeAttributes(for: text, in: fullRange, configuration: attributeConfiguration)
         applyAttributes(attributes, to: textStorage, baseRange: fullRange)
     }
 
@@ -108,8 +122,8 @@ final class SyntaxHighlighter {
             let lineRange = nsText.lineRange(for: dirty)
 
             // Add some buffer for multi-line constructs (code blocks, etc.)
-            let expandedStart = max(0, lineRange.location - 500)
-            let expandedEnd = min(fullLength, lineRange.upperBound + 500)
+            let expandedStart = max(0, lineRange.location - dirtyRangeBuffer)
+            let expandedEnd = min(fullLength, lineRange.upperBound + dirtyRangeBuffer)
             rangeToHighlight = NSRange(location: expandedStart, length: expandedEnd - expandedStart)
         } else {
             // Highlight visible range only
@@ -120,7 +134,7 @@ final class SyntaxHighlighter {
 
         // All highlighting is now synchronous on main thread for Swift 6 safety
         // The debouncing provides the performance improvement
-        let attributes = AttributeComputer.computeAttributes(for: text, in: rangeToHighlight)
+        let attributes = AttributeComputer.computeAttributes(for: text, in: rangeToHighlight, configuration: attributeConfiguration)
         applyAttributes(attributes, to: textStorage, baseRange: rangeToHighlight)
     }
 
@@ -134,9 +148,8 @@ final class SyntaxHighlighter {
         let charRange = layoutManager.characterRange(forGlyphRange: glyphRange, actualGlyphRange: nil)
 
         // Add buffer above and below
-        let buffer = 1000
-        let start = max(0, charRange.location - buffer)
-        let end = min(textView.textStorage?.length ?? 0, charRange.upperBound + buffer)
+        let start = max(0, charRange.location - visibleRangeBuffer)
+        let end = min(textView.textStorage?.length ?? 0, charRange.upperBound + visibleRangeBuffer)
 
         return NSRange(location: start, length: end - start)
     }
@@ -165,6 +178,13 @@ final class SyntaxHighlighter {
 // MARK: - Attribute Computation (Isolated from UI)
 
 private enum AttributeComputer {
+    struct Configuration {
+        let codeBlockScanBackLimit: Int
+
+        init(codeBlockScanBackLimit: Int = Int.max) {
+            self.codeBlockScanBackLimit = codeBlockScanBackLimit
+        }
+    }
 
     struct AttributeApplication {
         let range: NSRange
@@ -172,7 +192,7 @@ private enum AttributeComputer {
         let isBase: Bool
     }
 
-    static func computeAttributes(for text: String, in range: NSRange) -> [AttributeApplication] {
+    static func computeAttributes(for text: String, in range: NSRange, configuration: Configuration) -> [AttributeApplication] {
         let nsText = text as NSString
         var results: [AttributeApplication] = []
 
@@ -185,7 +205,7 @@ private enum AttributeComputer {
         }
 
         // Code blocks (used both for styling and exclusion)
-        let codeBlockRanges = computeCodeBlockRanges(text: nsText, highlightRange: range)
+        let codeBlockRanges = computeCodeBlockRanges(text: nsText, highlightRange: range, configuration: configuration)
         for codeBlockRange in codeBlockRanges {
             results.append(AttributeApplication(range: codeBlockRange, attributes: MarkdownStyles.codeBlock, isBase: false))
         }
@@ -359,7 +379,7 @@ private enum AttributeComputer {
 
     // MARK: - Code Blocks
 
-    private static func computeCodeBlockRanges(text: NSString, highlightRange: NSRange) -> [NSRange] {
+    private static func computeCodeBlockRanges(text: NSString, highlightRange: NSRange, configuration: Configuration) -> [NSRange] {
         guard highlightRange.length > 0 else { return [] }
 
         var results: [NSRange] = []
@@ -367,11 +387,19 @@ private enum AttributeComputer {
         let clampedUpperBound = min(highlightRange.upperBound, text.length)
         let scanLimit = min(text.length, text.lineRange(for: NSRange(location: clampedUpperBound, length: 0)).upperBound)
 
+        let scanStartCandidate: Int
+        if configuration.codeBlockScanBackLimit == Int.max {
+            scanStartCandidate = 0
+        } else {
+            scanStartCandidate = max(0, highlightRange.location - configuration.codeBlockScanBackLimit)
+        }
+        let scanStart = text.lineRange(for: NSRange(location: scanStartCandidate, length: 0)).location
+
         var inCodeBlock = false
         var codeBlockStart = 0
         var codeBlockFence = ""
 
-        var index = 0
+        var index = scanStart
         while index < scanLimit {
             var lineStart = 0
             var lineEnd = 0

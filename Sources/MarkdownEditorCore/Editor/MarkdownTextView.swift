@@ -1,5 +1,6 @@
 import SwiftUI
 import AppKit
+import Foundation
 
 struct MarkdownTextView: NSViewRepresentable {
     @Binding var text: String
@@ -224,10 +225,52 @@ struct MarkdownTextView: NSViewRepresentable {
         }
 
         private func updateStats(_ text: String) {
-            let lines = text.components(separatedBy: .newlines).count
-            let words = text.split { $0.isWhitespace || $0.isNewline }.count
-            let characters = text.count
-            parent.onStatsUpdate(words, lines, characters)
+            parent.onStatsUpdate(
+                Self.countWords(in: text),
+                Self.countLines(in: text),
+                text.count
+            )
+        }
+
+        private static func countLines(in text: String) -> Int {
+            guard !text.isEmpty else { return 0 }
+
+            var lines = 1
+            var previousWasCR = false
+
+            for codeUnit in text.utf16 {
+                switch codeUnit {
+                case 10: // \n
+                    if !previousWasCR {
+                        lines += 1
+                    }
+                    previousWasCR = false
+                case 13: // \r
+                    lines += 1
+                    previousWasCR = true
+                default:
+                    previousWasCR = false
+                }
+            }
+
+            return lines
+        }
+
+        private static func countWords(in text: String) -> Int {
+            var words = 0
+            var inWord = false
+
+            for scalar in text.unicodeScalars {
+                let isSeparator = CharacterSet.whitespacesAndNewlines.contains(scalar)
+                if isSeparator {
+                    inWord = false
+                } else if !inWord {
+                    words += 1
+                    inWord = true
+                }
+            }
+
+            return words
         }
 
         // MARK: - Formatting Actions
@@ -392,28 +435,36 @@ class MarkdownNSTextView: NSTextView {
         if event.modifierFlags.contains(.command) {
             switch event.charactersIgnoringModifiers {
             case "b":
-                NotificationCenter.default.post(name: .formatBold, object: nil)
+                NotificationCenter.default.post(name: .formatBold, object: self)
                 return true
             case "i":
                 if event.modifierFlags.contains(.shift) {
-                    NotificationCenter.default.post(name: .insertImage, object: nil)
+                    NotificationCenter.default.post(name: .insertImage, object: self)
                 } else {
-                    NotificationCenter.default.post(name: .formatItalic, object: nil)
+                    NotificationCenter.default.post(name: .formatItalic, object: self)
                 }
                 return true
             case "k":
-                NotificationCenter.default.post(name: .insertLink, object: nil)
+                NotificationCenter.default.post(name: .insertLink, object: self)
                 return true
             case "e":
-                NotificationCenter.default.post(name: .formatCode, object: nil)
+                NotificationCenter.default.post(name: .formatCode, object: self)
                 return true
             case "1", "2", "3", "4", "5", "6":
                 if let level = Int(event.charactersIgnoringModifiers ?? "") {
-                    NotificationCenter.default.post(name: .formatHeading, object: level)
+                    NotificationCenter.default.post(
+                        name: .formatHeading,
+                        object: self,
+                        userInfo: [MarkdownEditorNotificationUserInfoKey.headingLevel: level]
+                    )
                 }
                 return true
             case "0":
-                NotificationCenter.default.post(name: .formatHeading, object: 0)
+                NotificationCenter.default.post(
+                    name: .formatHeading,
+                    object: self,
+                    userInfo: [MarkdownEditorNotificationUserInfoKey.headingLevel: 0]
+                )
                 return true
             default:
                 break

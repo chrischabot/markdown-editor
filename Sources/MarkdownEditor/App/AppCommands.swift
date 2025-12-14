@@ -2,6 +2,8 @@ import SwiftUI
 import MarkdownEditorCore
 
 struct AppCommands: Commands {
+    @AppStorage(LargeDocumentMode.storageKey) private var largeDocumentModeSettingRaw: String = LargeDocumentModeSetting.auto.rawValue
+
     var body: some Commands {
         CommandGroup(after: .newItem) {
             Button("Close") {
@@ -15,27 +17,35 @@ struct AppCommands: Commands {
                 NotificationCenter.default.post(name: .showPreview, object: nil)
             }
             .keyboardShortcut("p", modifiers: [.command, .shift])
+
+            Divider()
+
+            Picker("Large Document Mode", selection: $largeDocumentModeSettingRaw) {
+                Text("Auto").tag(LargeDocumentModeSetting.auto.rawValue)
+                Text("On").tag(LargeDocumentModeSetting.on.rawValue)
+                Text("Off").tag(LargeDocumentModeSetting.off.rawValue)
+            }
         }
 
         CommandMenu("Format") {
             Group {
                 Button("Bold") {
-                    NotificationCenter.default.post(name: .formatBold, object: nil)
+                    EditorCommandRouter.post(.formatBold)
                 }
                 .keyboardShortcut("b")
 
                 Button("Italic") {
-                    NotificationCenter.default.post(name: .formatItalic, object: nil)
+                    EditorCommandRouter.post(.formatItalic)
                 }
                 .keyboardShortcut("i")
 
                 Button("Strikethrough") {
-                    NotificationCenter.default.post(name: .formatStrikethrough, object: nil)
+                    EditorCommandRouter.post(.formatStrikethrough)
                 }
                 .keyboardShortcut("x", modifiers: [.command, .shift])
 
                 Button("Inline Code") {
-                    NotificationCenter.default.post(name: .formatCode, object: nil)
+                    EditorCommandRouter.post(.formatCode)
                 }
                 .keyboardShortcut("e")
             }
@@ -45,7 +55,10 @@ struct AppCommands: Commands {
             Menu("Heading") {
                 ForEach(1...6, id: \.self) { level in
                     Button("Heading \(level)") {
-                        NotificationCenter.default.post(name: .formatHeading, object: level)
+                        EditorCommandRouter.post(
+                            .formatHeading,
+                            userInfo: [MarkdownEditorNotificationUserInfoKey.headingLevel: level]
+                        )
                     }
                     .keyboardShortcut(KeyEquivalent(Character("\(level)")))
                 }
@@ -53,7 +66,10 @@ struct AppCommands: Commands {
                 Divider()
 
                 Button("Remove Heading") {
-                    NotificationCenter.default.post(name: .formatHeading, object: 0)
+                    EditorCommandRouter.post(
+                        .formatHeading,
+                        userInfo: [MarkdownEditorNotificationUserInfoKey.headingLevel: 0]
+                    )
                 }
                 .keyboardShortcut("0")
             }
@@ -62,22 +78,22 @@ struct AppCommands: Commands {
 
             Group {
                 Button("Blockquote") {
-                    NotificationCenter.default.post(name: .formatBlockquote, object: nil)
+                    EditorCommandRouter.post(.formatBlockquote)
                 }
                 .keyboardShortcut(".", modifiers: [.command, .shift])
 
                 Button("Bulleted List") {
-                    NotificationCenter.default.post(name: .formatUnorderedList, object: nil)
+                    EditorCommandRouter.post(.formatUnorderedList)
                 }
                 .keyboardShortcut("u", modifiers: [.command, .shift])
 
                 Button("Numbered List") {
-                    NotificationCenter.default.post(name: .formatOrderedList, object: nil)
+                    EditorCommandRouter.post(.formatOrderedList)
                 }
                 .keyboardShortcut("o", modifiers: [.command, .shift])
 
                 Button("Task List") {
-                    NotificationCenter.default.post(name: .formatTaskList, object: nil)
+                    EditorCommandRouter.post(.formatTaskList)
                 }
                 .keyboardShortcut("t", modifiers: [.command, .shift])
             }
@@ -86,12 +102,12 @@ struct AppCommands: Commands {
 
             Group {
                 Button("Code Block") {
-                    NotificationCenter.default.post(name: .formatCodeBlock, object: nil)
+                    EditorCommandRouter.post(.formatCodeBlock)
                 }
                 .keyboardShortcut("c", modifiers: [.command, .shift])
 
                 Button("Horizontal Rule") {
-                    NotificationCenter.default.post(name: .formatHorizontalRule, object: nil)
+                    EditorCommandRouter.post(.formatHorizontalRule)
                 }
                 .keyboardShortcut("-", modifiers: [.command, .shift])
             }
@@ -100,17 +116,17 @@ struct AppCommands: Commands {
 
             Group {
                 Button("Insert Link...") {
-                    NotificationCenter.default.post(name: .insertLink, object: nil)
+                    EditorCommandRouter.post(.insertLink)
                 }
                 .keyboardShortcut("k")
 
                 Button("Insert Image...") {
-                    NotificationCenter.default.post(name: .insertImage, object: nil)
+                    EditorCommandRouter.post(.insertImage)
                 }
                 .keyboardShortcut("i", modifiers: [.command, .shift])
 
                 Button("Insert Table") {
-                    NotificationCenter.default.post(name: .insertTable, object: nil)
+                    EditorCommandRouter.post(.insertTable)
                 }
                 .keyboardShortcut("t", modifiers: [.command, .option])
             }

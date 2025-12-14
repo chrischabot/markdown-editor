@@ -5,7 +5,15 @@ public struct MarkdownDocument: FileDocument {
     public static var readableContentTypes: [UTType] { [.markdown, .plainText] }
     public static var writableContentTypes: [UTType] { [.markdown] }
 
-    public var text: String
+    public var text: String {
+        didSet {
+            if text.hasPrefix("---") {
+                metadata = FrontMatterParser.parse(text)?.frontMatter
+            } else {
+                metadata = nil
+            }
+        }
+    }
     public var metadata: FrontMatter?
 
     public init(text: String = "") {

@@ -4,9 +4,15 @@ struct StatusBarView: View {
     let wordCount: Int
     let lineCount: Int
     let characterCount: Int
+    let largeDocumentMode: Bool
 
     var body: some View {
         HStack(spacing: 16) {
+            if largeDocumentMode {
+                Text("Large Mode")
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(.secondary)
+            }
             Spacer()
 
             StatLabel(value: lineCount, singular: "line", plural: "lines")
