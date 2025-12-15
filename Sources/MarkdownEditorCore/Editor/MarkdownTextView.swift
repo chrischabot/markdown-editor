@@ -73,6 +73,7 @@ struct MarkdownTextView: NSViewRepresentable {
             textView.string = text
             textView.selectedRanges = selectedRanges
             context.coordinator.highlighter?.highlightAll()
+            context.coordinator.updateStatsImmediately(text)
         }
     }
 
@@ -230,6 +231,11 @@ struct MarkdownTextView: NSViewRepresentable {
                 Self.countLines(in: text),
                 text.count
             )
+        }
+
+        func updateStatsImmediately(_ text: String) {
+            statsWorkItem?.cancel()
+            updateStats(text)
         }
 
         private static func countLines(in text: String) -> Int {
