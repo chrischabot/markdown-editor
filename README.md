@@ -59,6 +59,10 @@ The app sets its own activation policy on launch, so a copy started from the ter
 
 `Scripts/build-dmg.sh` turns the binary into a real app: it wraps it in a bundle with `Sources/Info.plist`, which declares the Markdown file types, signs it with the sandbox entitlements, then notarizes and packages the result. It is set up for the project's own Developer ID and notarytool keychain profile, so change `SIGNING_IDENTITY` and `NOTARIZATION_PROFILE` at the top of the script before running it.
 
+## Project background
+
+- [Markdown editor project overview](https://chabot.dev/projects/#markdown-editor) on Chris Chabot’s site.
+
 ## License
 
 [MIT](LICENSE). Front matter parsing uses [Yams](https://github.com/jpsim/Yams) by JP Simard, also under the MIT license.
