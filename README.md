@@ -1,101 +1,64 @@
 # Markdown Editor
 
-A fast, lightweight markdown editor for macOS that bridges the gap between raw markup and rendered output.
+Markdown Editor is a small native macOS app for people who write notes, documentation or posts in Markdown and would rather see the structure of a document as they type than keep glancing across at a preview pane. Plain Markdown makes you translate symbols in your head, where `**` means bold and `##` means a section heading, and split-pane editors answer by putting the result somewhere else on the screen. This editor applies the formatting to the text you are typing: a heading grows to heading size with its `#` dimmed, bold text turns bold with its asterisks still visible, and a fenced code block takes on a monospaced font and a tinted background, all in the one view where you are writing.
 
-## Philosophy
+The markers stay in the text, so you can always see and change exactly what will be saved, and because the styling exists only in the editor, the file on disk is the same plain UTF-8 Markdown you typed.
 
-Markdown is powerful but abstract. When you type `**bold**` or `# Heading`, you're working with symbols that represent formatting rather than seeing the formatting itself. This cognitive translation—mapping markup characters to their visual result—adds friction to the writing process.
+## Install
 
-This editor takes a different approach: **inline rendering**. As you type, the markdown syntax transforms visually in place. Headings appear larger, bold text becomes bold, code gets monospaced styling. You're still writing markdown (the underlying text remains pure markdown), but you see a representation of the final output as you write.
+Download `MarkdownEditor.dmg` from the [latest release](https://github.com/chrischabot/markdown-editor/releases/latest), open it and drag the app to Applications. The app is signed and notarized, and it needs macOS 14 (Sonoma) or later on Apple Silicon. The release contains no Intel build, so on an Intel Mac you will need to [build from source](#development). It runs in the App Sandbox, where it can open and save the files you choose and has no network entitlement.
 
-This isn't a split-pane editor where you write on one side and preview on the other. It's a single unified view where the act of writing and the result of writing occupy the same space. The goal is to let you focus on your thoughts, not on mentally parsing markup syntax.
+## Usage
 
-## Design Principles
+Open a UTF-8 `.md`, `.markdown`, `.mdown`, `.mkd` or `.txt` file, or start a new document, and each one gets its own window with the usual macOS open, save and recent-file handling. Beyond headings and emphasis, the editor strikes through checked tasks, gives link text the link colour while dimming the URL, sets blockquotes in muted, indented italics and shows YAML front matter in monospaced purple. Because it only restyles the text, some elements stop short of their rendered form: table rows keep their proportional spacing with dimmed pipes rather than lining up in columns, and an image stays a line of styled text.
 
-**Speed above all.** Every keystroke should feel instant. The editor uses:
-- Debounced syntax highlighting (~60fps, 16ms delay) to avoid blocking input
-- Incremental highlighting that only processes changed regions
-- Throttled statistics updates to prevent unnecessary recalculation
-- Native TextKit for hardware-accelerated text rendering
-
-**Lightweight.** No Electron, no web views for editing, no heavy frameworks. Built with Swift and AppKit's native text system (TextKit 1) wrapped in SwiftUI. The binary is small and launches instantly.
-
-**Familiar editing.** Standard macOS text editing behaviors work as expected—spell check, grammar check, find/replace, undo/redo, and all the keyboard shortcuts you already know.
-
-## Features
-
-### Inline Syntax Styling
-- **Headings** (H1-H6) render at appropriate sizes with visual weight
-- **Bold**, *italic*, and ***bold italic*** text displays with proper styling
-- ~~Strikethrough~~ appears struck through
-- `Inline code` uses monospace font with subtle background
-- Code blocks get distinct styling with language indicators
-- Blockquotes show with left border and muted color
-- Lists (bulleted, numbered, task) display with proper indentation
-- Tables render with aligned columns
-- Links and images are visually distinct
-- YAML front matter gets special dimmed treatment
-
-### Formatting Tools
-- Toolbar with quick-access formatting buttons
-- Full Format menu with keyboard shortcuts
-- Smart list continuation (press Enter to continue lists)
-- Heading level picker
-
-### Preview
-- Full rendered preview in a separate window (Shift+Cmd+P)
-- GitHub-flavored markdown styling
-- Automatic dark/light mode support
-- Real HTML rendering via WebKit
-
-### Standard Features
-- Multi-document support with tabs
-- Native macOS file handling (save, open, recent files)
-- Word, line, and character count in status bar
-- Standard text editing (spell check, find/replace, etc.)
-
-## Keyboard Shortcuts
+The toolbar and the Format menu write the same Markdown you could type yourself: Bold wraps the selection in `**`, and a list command adds its marker to the start of the current line. They insert markup rather than toggling it, and on a multi-line selection a list command marks only the first line.
 
 | Action | Shortcut |
 |--------|----------|
-| Bold | Cmd+B |
-| Italic | Cmd+I |
-| Inline Code | Cmd+E |
-| Insert Link | Cmd+K |
-| Insert Image | Shift+Cmd+I |
-| Heading 1-6 | Cmd+1 through Cmd+6 |
-| Remove Heading | Cmd+0 |
+| Bold, italic | Cmd+B, Cmd+I |
+| Strikethrough | Shift+Cmd+X |
+| Inline code | Cmd+E |
+| Heading 1 to 6, remove heading | Cmd+1 to Cmd+6, Cmd+0 |
 | Blockquote | Shift+Cmd+. |
-| Bulleted List | Shift+Cmd+U |
-| Numbered List | Shift+Cmd+O |
-| Task List | Shift+Cmd+T |
-| Code Block | Shift+Cmd+C |
-| Horizontal Rule | Shift+Cmd+- |
-| Insert Table | Option+Cmd+T |
-| Show Preview | Shift+Cmd+P |
+| Bulleted, numbered, task list | Shift+Cmd+U, Shift+Cmd+O, Shift+Cmd+T |
+| Code block | Shift+Cmd+C |
+| Horizontal rule | Shift+Cmd+- |
+| Link, image | Cmd+K, Shift+Cmd+I |
+| Table | Option+Cmd+T |
+| Preview | Shift+Cmd+P |
 
-## System Requirements
+Spell and grammar checking, the find bar and undo come from the standard macOS text view, while smart quotes, smart dashes, text replacement and autocorrect are switched off so that the editor doesn't rewrite your markup. The status bar keeps a running count of lines, words and characters.
 
-- **macOS 14.0** (Sonoma) or later
-- Apple Silicon or Intel Mac
-- Built with Swift 6 and strict concurrency checking
+### Preview
 
-## Building
+Shift+Cmd+P opens a snapshot of the document in a separate WebKit window, styled after GitHub with light and dark variants. It doesn't follow your edits, so press the shortcut again to refresh it. With several documents open, the preview can show a different document; use it with one document open. The HTML comes from a small line-by-line converter rather than a CommonMark or GFM parser, which makes the preview a quick look and not a prediction of what your publishing pipeline will produce: hard-wrapped lines become separate paragraphs, indented list items fall out of their lists, front matter appears as body text and tables repeat once per row. Images are unreliable too, because the page has no base URL for relative paths and the sandboxed release cannot fetch remote ones.
+
+## How it works
+
+The app is a SwiftUI `DocumentGroup` around a TextKit 1 `NSTextView` with a custom `NSTextStorage`, chosen because styling text in place needs direct access to the text storage, which SwiftUI's `TextEditor` doesn't offer. There is no Electron and no web view on the editing side, and the whole v0.2 disk image comes to under a megabyte.
+
+After each edit, `SyntaxHighlighter` waits 16 ms so that a burst of keystrokes collapses into a single pass. It then runs regular expressions over the edited lines plus a small buffer, or over the visible text when TextKit doesn't report an edited range, and applies the resulting fonts, colours and paragraph styles to the text storage. The debounce and the limited range reduce repeated highlighting work on the main thread. Code fences are the exception to that limit, because knowing whether a line sits inside a block means scanning down from the top of the document.
+
+That scan grows with the length of the file, and so does continuous spell checking, which is why very large documents get a mode of their own. At 200,000 characters or 5,000 lines the app switches to Large Document Mode and says so in the status bar: the debounce rises to 50 ms, the highlighted ranges shrink, the fence scan looks back at most 50,000 characters, the counts update less often, and spell and grammar checking turn off. A code block opened further back than that limit can lose its code styling. View > Large Document Mode overrides the automatic choice.
+
+## Development
+
+Building from source needs a Swift 6 toolchain, which comes with Xcode 16 or later.
 
 ```bash
-# Debug build
-swift build
-
-# Release build
-swift build -c release
-
-# Run tests
-swift test
-
-# Run the app
-.build/release/MarkdownEditor
+git clone https://github.com/chrischabot/markdown-editor.git
+cd markdown-editor
+swift build -c release          # optimized build
+.build/release/MarkdownEditor   # launch it from the terminal
+swift run MarkdownEditor        # or build and launch a debug copy
+swift test                      # run the XCTest suite
 ```
+
+The app sets its own activation policy on launch, so a copy started from the terminal still takes keyboard focus. The tests exercise the syntax patterns, front matter parser and document model. Most changes start in `Sources/MarkdownEditorCore`: `Parsing/SyntaxPatterns.swift` decides what gets recognized, `Styling/MarkdownStyles.swift` decides how it looks, `Editor/SyntaxHighlighter.swift` connects the two and `Rendering/MarkdownRenderer.swift` produces the preview. [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md) records the original design reasoning, including the choice of TextKit 1 over TextKit 2, though the code has moved on from it in places.
+
+`Scripts/build-dmg.sh` turns the binary into a real app: it wraps it in a bundle with `Sources/Info.plist`, which declares the Markdown file types, signs it with the sandbox entitlements, then notarizes and packages the result. It is set up for the project's own Developer ID and notarytool keychain profile, so change `SIGNING_IDENTITY` and `NOTARIZATION_PROFILE` at the top of the script before running it.
 
 ## License
 
-MIT License. See [LICENSE](LICENSE) for details.
+[MIT](LICENSE). Front matter parsing uses [Yams](https://github.com/jpsim/Yams) by JP Simard, also under the MIT license.
